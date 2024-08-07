@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const cors = require('cors'); // Import cors
+const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
@@ -29,18 +29,23 @@ if (fs.existsSync(countFilePath)) {
 // Middleware to handle CORS
 app.use(cors());
 
+// Function to save unique count to count.json
+const saveUniqueCount = () => {
+  fs.writeFileSync(countFilePath, JSON.stringify({ uniqueCount }));
+};
+
+// Connection handler for socket.io
 io.on('connection', (socket) => {
   console.log('A user connected');
   const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
-  
+
   onlineVisitors.add(socket.id);
-  
+
   // Check if the IP is already in the uniqueVisitors set
   if (!uniqueVisitors.has(ip)) {
     uniqueVisitors.add(ip);
     uniqueCount++;
-    // Save the uniqueCount to count.json
-    fs.writeFileSync(countFilePath, JSON.stringify({ uniqueCount }));
+    saveUniqueCount();
   }
 
   io.emit('updateOnlineVisitors', onlineVisitors.size);
@@ -53,16 +58,16 @@ io.on('connection', (socket) => {
   });
 });
 
-// Log the number of connected users every 2 seconds
+// Log the number of connected users every 10 seconds
 setInterval(() => {
   console.log(`Number of connected users: ${onlineVisitors.size}`);
-}, 2000);
+}, 10000);
 
 // Reset unique user data every week
 const resetWeekly = () => {
   uniqueVisitors.clear();
   uniqueCount = 0;
-  fs.writeFileSync(countFilePath, JSON.stringify({ uniqueCount }));
+  saveUniqueCount();
   console.log('Unique user data reset');
 };
 
