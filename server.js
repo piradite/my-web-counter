@@ -29,12 +29,14 @@ if (fs.existsSync(countFilePath)) {
 // Middleware to handle CORS
 app.use(cors());
 
+// Serve static files from the 'public' folder
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Function to save unique count to count.json
 const saveUniqueCount = () => {
   fs.writeFileSync(countFilePath, JSON.stringify({ uniqueCount }));
 };
 
-// Connection handler for socket.io
 io.on('connection', (socket) => {
   console.log('A user connected');
   const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;

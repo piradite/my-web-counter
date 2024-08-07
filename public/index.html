@@ -3,16 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DON'T</title>
   <style>
     body {
-      margin: 0;
-      height: 100vh;
-      background-color: black;
-      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #status {
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
+  <div id="status">
+    <p>Online Visitors: <span id="onlineVisitors">0</span></p>
+    <p>Unique Visitors: <span id="uniqueVisitors">0</span></p>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    socket.on('updateOnlineVisitors', (count) => {
+      document.getElementById('onlineVisitors').textContent = count;
+    });
+
+    socket.on('updateUniqueVisitors', (count) => {
+      document.getElementById('uniqueVisitors').textContent = count;
+    });
+  </script>
 </body>
 </html>
