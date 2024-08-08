@@ -1,16 +1,20 @@
 const express = require('express');
 const http = require('http');
-const socketIo = require('socket.io');
 const cors = require('cors');
 const axios = require('axios');
 const moment = require('moment');
+const Pusher = require('pusher');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server, {
-  cors: {
-    origin: '*',
-  }
+
+// Initialize Pusher
+const pusher = new Pusher({
+  appId: '1846722',
+  key: '8cdc5ac541c7c00557e8',
+  secret: '43fc3ad6cdfc65eed23d',
+  cluster: 'eu',
+  useTLS: true
 });
 
 const port = 3001;
@@ -51,7 +55,24 @@ setInterval(() => {
   console.log(`Number of connected users: ${onlineVisitors.size}`);
 }, 10000);
 
-io.on('connection', (socket) => {
+// Handle Pusher WebSocket connection
+app.post('/pusher/auth', (req, res) => {
+  const socketId = req.body.socket_id;
+  const channel = req.body.channel_name;
+  const auth = pusher.authenticate(socketId, channel);
+  res.send(auth);
+});
+
+app.use(express.json()); // For parsing application/json
+
+app.post('/event', (req, res) => {
+  const { event, data } = req.body;
+  pusher.trigger('my-channel', event, data);
+  res.status(200).send('Event triggered');
+});
+
+// Replace the Socket.io connection with Pusher
+const handleNewConnection = (socket) => {
   console.log('A user connected');
   const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
   const now = moment();
@@ -64,15 +85,16 @@ io.on('connection', (socket) => {
     uniqueCount++;
   }
 
-  io.emit('updateOnlineVisitors', onlineVisitors.size);
-  io.emit('updateUniqueVisitors', uniqueCount);
+  // Broadcast updates using Pusher
+  pusher.trigger('my-channel', 'updateOnlineVisitors', { onlineVisitors: onlineVisitors.size });
+  pusher.trigger('my-channel', 'updateUniqueVisitors', { uniqueCount });
 
   socket.on('disconnect', () => {
     console.log('A user disconnected');
     onlineVisitors.delete(socket.id);
-    io.emit('updateOnlineVisitors', onlineVisitors.size);
+    pusher.trigger('my-channel', 'updateOnlineVisitors', { onlineVisitors: onlineVisitors.size });
   });
-});
+};
 
 // Reset unique user data every 30 days
 const resetMonthly = () => {
