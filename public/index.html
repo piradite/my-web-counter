@@ -1,27 +1,35 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
-  <script>
-    // Initialize Pusher
-    const pusher = new Pusher('8cdc5ac541c7c00557e8', {
-      cluster: 'eu'
-    });
-
-    // Subscribe to a channel
-    const channel = pusher.subscribe('my-channel');
-
-    // Listen for updateOnlineVisitors event
-    channel.bind('updateOnlineVisitors', function(data) {
-      console.log('Online visitors:', data.onlineVisitors);
-    });
-
-    // Listen for updateUniqueVisitors event
-    channel.bind('updateUniqueVisitors', function(data) {
-      console.log('Unique visitors:', data.uniqueCount);
-    });
-  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #status {
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
+  <div id="status">
+    <p>Online Visitors: <span id="onlineVisitors">0</span></p>
+    <p>Unique Visitors: <span id="uniqueVisitors">0</span></p>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    socket.on('updateOnlineVisitors', (count) => {
+      document.getElementById('onlineVisitors').textContent = count;
+    });
+
+    socket.on('updateUniqueVisitors', (count) => {
+      document.getElementById('uniqueVisitors').textContent = count;
+    });
+  </script>
 </body>
 </html>
