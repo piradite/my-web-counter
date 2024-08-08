@@ -24,6 +24,11 @@ app.use(cors());
 // Serve static files from the 'public' folder
 app.use(express.static('public'));
 
+// Define the /ping endpoint
+app.get('/ping', (req, res) => {
+  res.send('Server is alive');
+});
+
 // Function to send stats to Discord webhook
 const sendStatsToDiscord = async () => {
   const stats = {
@@ -88,7 +93,7 @@ const resetMonthly = () => {
 };
 
 // 30 days in milliseconds
-const thirtyDays = 7 * 24 * 60 * 60 * 1000;
+const thirtyDays = 24 * 24 * 60 * 60 * 1000;
 setInterval(resetMonthly, thirtyDays);
 
 // Initial reset
