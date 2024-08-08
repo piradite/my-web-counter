@@ -1,20 +1,16 @@
 const express = require('express');
 const http = require('http');
-const Pusher = require("pusher");
+const socketIo = require('socket.io');
 const cors = require('cors');
 const axios = require('axios');
 const moment = require('moment');
 
 const app = express();
 const server = http.createServer(app);
-
-// Initialize Pusher with your credentials
-const pusher = new Pusher({
-  appId: "1846722",
-  key: "8cdc5ac541c7c00557e8",
-  secret: "43fc3ad6cdfc65eed23d",
-  cluster: "eu",
-  useTLS: true
+const io = socketIo(server, {
+  cors: {
+    origin: '*',
+  }
 });
 
 const port = 3001;
@@ -55,22 +51,35 @@ setInterval(() => {
   console.log(`Number of connected users: ${onlineVisitors.size}`);
 }, 10000);
 
-// Example function to update online visitors count via Pusher
-const updateOnlineVisitors = () => {
-  pusher.trigger('my-channel', 'update-online-visitors', { count: onlineVisitors.size });
-};
+io.on('connection', (socket) => {
+  console.log('A user connected');
+  const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
+  const now = moment();
 
-// Example function to update unique visitors count via Pusher
-const updateUniqueVisitors = () => {
-  pusher.trigger('my-channel', 'update-unique-visitors', { count: uniqueCount });
-};
+  onlineVisitors.add(socket.id);
+
+  // Check if the IP is already in the uniqueVisitors map
+  if (!uniqueVisitors.has(ip) || now.diff(uniqueVisitors.get(ip), 'days') > 30) {
+    uniqueVisitors.set(ip, now); // Update last visit timestamp
+    uniqueCount++;
+  }
+
+  io.emit('updateOnlineVisitors', onlineVisitors.size);
+  io.emit('updateUniqueVisitors', uniqueCount);
+
+  socket.on('disconnect', () => {
+    console.log('A user disconnected');
+    onlineVisitors.delete(socket.id);
+    io.emit('updateOnlineVisitors', onlineVisitors.size);
+  });
+});
 
 // Reset unique user data every 30 days
 const resetMonthly = () => {
   const now = moment();
   // Remove IPs that have not been active in the last 30 days
   uniqueVisitors.forEach((timestamp, ip) => {
-    if (now.diff(timestamp, 'days') > 30) {
+    if (now.diff(timestamp, 'days') > 7) {
       uniqueVisitors.delete(ip);
       uniqueCount--; // Only decrement if we actually remove an IP
     }
@@ -79,7 +88,7 @@ const resetMonthly = () => {
 };
 
 // 30 days in milliseconds
-const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+const thirtyDays = 7 * 24 * 60 * 60 * 1000;
 setInterval(resetMonthly, thirtyDays);
 
 // Initial reset
